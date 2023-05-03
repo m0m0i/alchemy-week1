@@ -1,7 +1,8 @@
 import { useState } from "react";
 import server from "./server";
+import { signMessage } from "./crypto";
 
-function Transfer({ address, setBalance }) {
+function Transfer({ address, setBalance, publicKey, privateKey }) {
   const [sendAmount, setSendAmount] = useState("");
   const [recipient, setRecipient] = useState("");
 
@@ -11,13 +12,20 @@ function Transfer({ address, setBalance }) {
     evt.preventDefault();
 
     try {
-      const {
-        data: { balance },
-      } = await server.post(`send`, {
-        sender: address,
+      const message = {
         amount: parseInt(sendAmount),
         recipient,
-      });
+        publicKey,
+        sender: address,
+      };
+      const signature = signMessage(message, privateKey);
+      const sigHex = signature.toCompactHex();
+      const transaction = { message, sigHex };
+
+      const {
+        data: { balance },
+      } = await server.post(`send`, transaction);
+
       setBalance(balance);
     } catch (ex) {
       alert(ex.response.data.message);
